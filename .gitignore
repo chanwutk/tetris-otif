@@ -1,1 +1,9 @@
 __pycache__
+# Built Go binaries, scored outputs, and local clones (see TETRIS.md)
+pipeline2/detector
+pipeline2/eval
+pipeline2/param-tune
+pipeline2/track
+pipeline2/outputs/
+python/detectron2/
+.gopath/

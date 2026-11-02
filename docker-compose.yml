@@ -6,9 +6,9 @@ services:
     environment:
       - TERM=xterm-256color
     volumes:
-      - /work/alenachao/otif:/otif
-      # Change /data/chawutk/otif-dataset to your local path
-      - /work/alenachao/data/otif-dataset:/path/to/otif-dataset
+      # This checkout, and the OTIF data root (OTIF_DATA, see TETRIS.md), at the paths the run commands use.
+      - .:/otif
+      - ${OTIF_DATA:?set OTIF_DATA to the OTIF data root}:/path/to/otif-dataset
     deploy:
       resources:
         reservations:
