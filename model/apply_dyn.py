@@ -13,10 +13,6 @@ import tensorflow.compat.v1 as tf
 #tf.disable_eager_execution()
 import time
 
-def eprint(s):
-	sys.stderr.write(s+"\n")
-	sys.stderr.flush()
-
 batch_size = int(sys.argv[1])
 width = int(sys.argv[2])
 height = int(sys.argv[3])

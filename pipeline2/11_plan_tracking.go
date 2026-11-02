@@ -17,7 +17,7 @@ func main() {
 
 	videoPath := cfg.RootPath + "train/video/"
 	detectPath := cfg.RootPath + "train/" + detector.Dir() + "/"
-	trackPath := cfg.RootPath + "train/tracks/"
+	trackPath := cfg.RootPath + "tracker/tracks/"
 	tracker := lib.NewTracker("rnn", cfg)
 	defer tracker.Close()
 

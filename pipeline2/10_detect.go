@@ -25,7 +25,50 @@ func main() {
 
 	cfg := lib.GetConfig(dataRoot, label)
 	batchSize := 16
-	yolo := lib.NewYolov3(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.25, map[string]bool{}, label)
+
+	var yolo *lib.Yolov3
+	var debug_message string
+
+	if strings.HasPrefix(label, "caldot") {
+
+		if strings.HasSuffix(label, "y5") {
+			debug_message = "using yolov5..."
+			yolo = lib.NewYolov5(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.25, map[string]bool{}, label)
+		} else if strings.HasSuffix(label, "y11") {
+			debug_message = "using yolov11..."
+			yolo = lib.NewYolov11(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.25, map[string]bool{}, label)
+		} else {
+			debug_message = "y5 and y11 not included, using yolov3..."
+			yolo = lib.NewYolov3(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.25, map[string]bool{}, label)
+		}
+
+	} else if strings.HasPrefix(label, "amsterdam") {
+
+		if strings.HasSuffix(label, "y5") {
+			debug_message = "using yolov5..."
+			yolo = lib.NewYolov5(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.25, map[string]bool{}, label)
+		} else if strings.HasSuffix(label, "y11") {
+			debug_message = "using yolov11..."
+			yolo = lib.NewYolov11(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.25, map[string]bool{}, label)
+		} else {
+			debug_message = "y5 and y11 not included, using yolov3..."
+			yolo = lib.NewYolov3(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.25, map[string]bool{}, label)
+		}
+
+	} else if strings.HasPrefix(label, "jnc") {
+		debug_message = "using retinanet..."
+		yolo = lib.NewRetinanet(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.5, map[string]bool{}, label)
+
+	} else {
+		debug_message = "not caldot or jnc, using yolov3..."
+		yolo = lib.NewYolov3(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.25, map[string]bool{}, label)
+	}
+
+	fmt.Println(debug_message)
+	// yolo := lib.NewYolov3(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.25, map[string]bool{}, label)
+	// yolo := lib.NewRetinanet(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.5, map[string]bool{}, label)
+	// yolo := lib.NewYolov5(dataRoot, batchSize, detectDims, detectDims, cfg.OrigDims, 0.25, map[string]bool{}, label)
+
 
 	ch := make(chan string)
 	var wg sync.WaitGroup
@@ -44,7 +87,7 @@ func main() {
 						if err == io.EOF {
 							break
 						} else if err != nil {
-							panic(err)
+							panic(fmt.Errorf("error reading frame from %s: %w", fname, err))
 						}
 						images = append(images, im)
 					}
@@ -59,10 +102,10 @@ func main() {
 				vreader.Close()
 				bytes, err := json.Marshal(detections)
 				if err != nil {
-					panic(err)
+					panic(fmt.Errorf("error marshaling detections for %s: %w", label, err))
 				}
 				if err := ioutil.WriteFile(filepath.Join(outPath, label+".json"), bytes, 0644); err != nil {
-					panic(err)
+					panic(fmt.Errorf("error writing JSON file for %s: %w", label, err))
 				}
 			}
 		}()

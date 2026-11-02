@@ -1,5 +1,6 @@
 import numpy
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 #tf.disable_eager_execution()
 import os
 import os.path
@@ -179,7 +180,7 @@ class Model:
 		self.pre_outputs = tf.reshape(fc4, [num_inputs, num_boxes])
 		self.pre_outputs = tf.concat([
 			self.pre_outputs[:, 0:num_boxes-1],
-			-6*tf.ones([num_inputs, 1], dtype=tf.float32),
+			-6.0 * tf.ones(tf.stack([num_inputs, 1]), dtype=tf.float32),
 		], axis=1)
 		self.outputs = tf.nn.softmax(self.pre_outputs)
 
@@ -202,7 +203,7 @@ class Model:
 			logits = tf.concat([
 				(self.pre_outputs[:, 0:num_boxes-1] + reid_logits)/2,
 				#reid_logits,
-				-6*tf.ones([num_inputs, 1], dtype=tf.float32),
+				-6.0 * tf.ones(tf.stack([num_inputs, 1]), dtype=tf.float32),
 			], axis=1)
 			self.outputs = tf.nn.softmax(logits)
 

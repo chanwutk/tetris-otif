@@ -21,6 +21,14 @@ func main() {
 	mode := os.Args[3]
 	validfile := os.Args[4]
 	logfile := os.Args[5]
+	videoPath := ""
+	outRoot := ""
+    if len(os.Args) > 7 {
+        videoPath = os.Args[6]
+		outRoot = os.Args[7]
+    }
+
+	// fmt.Println("videoPath:", videoPath) // TODO: delete after testing
 
 	cfg := lib.GetConfig(dataRoot, label)
 	opts := lib.GetExecOptions(mode, true)
@@ -41,12 +49,15 @@ func main() {
 		validAcc, _ := strconv.ParseFloat(parts[5], 64)
 
 		// create directory where output tracks will be stored
-		outDir := fmt.Sprintf("./outputs/%s/%s/%d/", label, mode, i)
+		if outRoot == "" {
+			outRoot = fmt.Sprintf("./outputs/%s/%s", label, mode)
+		}
+		outDir := fmt.Sprintf("%s/%d", outRoot, i)
 		os.MkdirAll(outDir, 0755)
 
-		t, acc, stderr := lib.Exec2(dataRoot, cfg, "test", outDir, detectCfg, segmentCfg, trackerCfg, opts)
+		t, acc, stderr, segTime, detectTime, trackTime, decodeTime := lib.Exec2(dataRoot, cfg, "test", outDir, detectCfg, segmentCfg, trackerCfg, opts, videoPath)
 
-		logStr := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\t%v", detectCfg, segmentCfg, trackerCfg, t, validAcc, acc, stderr)
+		logStr := fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\t%v\t%v\t%v\t%v\t%v", detectCfg, segmentCfg, trackerCfg, t, segTime, detectTime, trackTime, decodeTime, validAcc, acc, stderr)
 		fmt.Println(logStr)
 		file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {

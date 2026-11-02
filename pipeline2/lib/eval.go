@@ -4,7 +4,7 @@ import (
 	"github.com/mitroadmaps/gomapinfer/common"
 	"fmt"
 	"io/ioutil"
-	"math"
+	_"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,15 +12,33 @@ import (
 	"strings"
 )
 
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func GetGoodTracks(label string, detections [][]Detection) [][][]TrackDetection {
 	tracks := GetTracks(detections)
 	numSegments := 1
 	if label == "shibuya" {
 		numSegments = 10
-	} else if label == "caldot1" || label == "caldot1-mota" || label == "caldot2" || label == "warsaw" {
+	} else if strings.HasPrefix(label, "caldot") || label == "warsaw" {
 		numSegments = 2
 	} else if label == "uav" {
 		numSegments = 8
+	} else if label == "jnc0" {
+		numSegments = 6
+	} else if label == "jnc2" || label == "jnc6" || label == "jnc7" {
+		numSegments = 12
 	}
 	goodTracks := make([][][]TrackDetection, numSegments)
 	for _, track := range tracks {
@@ -164,7 +182,7 @@ func GetGoodTracks(label string, detections [][]Detection) [][][]TrackDetection 
 			if segment >= 0 {
 				goodTracks[segment] = append(goodTracks[segment], track)
 			}
-		} else if label == "caldot1" || label == "caldot1-mota" {
+		} else if label == "caldot1" || label == "caldot1-mota" || label == "caldot1-y5" || label == "caldot1-y11" {
 			topPoly := common.Polygon{
 				common.Point{458, 344},
 				common.Point{598, 138},
@@ -190,7 +208,7 @@ func GetGoodTracks(label string, detections [][]Detection) [][][]TrackDetection 
 			if segment >= 0 {
 				goodTracks[segment] = append(goodTracks[segment], track)
 			}
-		} else if label == "caldot2" {
+		} else if label == "caldot2" || label == "caldot2-y5" || label == "caldot2-y11"{
 			topPoly := common.Polygon{
 				common.Point{334, 344},
 				common.Point{588, 167},
@@ -207,6 +225,7 @@ func GetGoodTracks(label string, detections [][]Detection) [][][]TrackDetection 
 			p1_ := track[len(track)-1].Center()
 			p0 := common.Point{float64(p0_.X), float64(p0_.Y)}
 			p1 := common.Point{float64(p1_.X), float64(p1_.Y)}
+
 			segment := -1
 			if topPoly.Contains(p0) && bottomPoly.Contains(p1) {
 				segment = 0
@@ -216,8 +235,239 @@ func GetGoodTracks(label string, detections [][]Detection) [][][]TrackDetection 
 			if segment >= 0 {
 				goodTracks[segment] = append(goodTracks[segment], track)
 			}
+		} else if label == "jnc0" {
+			leftPoly := common.Polygon{
+				common.Point{300, 406},
+				common.Point{300, 100},
+				common.Point{0, 94},
+				common.Point{0, 350},
+			}
+
+			rightTopPoly := common.Polygon{
+				common.Point{1080, 0},
+				common.Point{780, 0},
+				common.Point{800, 230},
+				common.Point{1080, 155},
+			}
+
+			rightBotPoly := common.Polygon{
+				common.Point{1080, 500},
+				common.Point{815, 380},
+				common.Point{740, 590},
+				common.Point{1080, 720},
+			}
+
+			p0_ := track[0].Center()
+			p1_ := track[len(track)-1].Center()
+			p0 := common.Point{float64(p0_.X), float64(p0_.Y)}
+			p1 := common.Point{float64(p1_.X), float64(p1_.Y)}
+
+			segment := -1
+			if leftPoly.Contains(p0) && rightTopPoly.Contains(p1) {
+				segment = 0
+			} else if leftPoly.Contains(p0) && rightBotPoly.Contains(p1) {
+				segment = 1
+			} else if rightTopPoly.Contains(p0) && leftPoly.Contains(p1) {
+				segment = 2
+			} else if rightBotPoly.Contains(p0) && leftPoly.Contains(p1) {
+				segment = 3
+			} else if rightTopPoly.Contains(p0) && rightBotPoly.Contains(p1) {
+				segment = 4
+			} else if rightBotPoly.Contains(p0) && rightTopPoly.Contains(p1) {
+				segment = 5
+			}
+
+			if segment >= 0 {
+				goodTracks[segment] = append(goodTracks[segment], track)
+			}
+		} else if label == "jnc2" {
+			leftPoly := common.Polygon{
+				common.Point{250, 490},
+				common.Point{250, 300},
+				common.Point{0, 300},
+				common.Point{0, 475},
+			}
+			topPoly := common.Polygon{
+				common.Point{680, 0},
+				common.Point{380, 0},
+				common.Point{370, 230},
+				common.Point{680, 155},
+			}
+			rightPoly := common.Polygon{
+				common.Point{1080, 275},
+				common.Point{815, 260},
+				common.Point{815, 540},
+				common.Point{1080, 525},
+			}
+			bottomPoly := common.Polygon{
+				common.Point{750, 600},
+				common.Point{300, 600},
+				common.Point{370, 720},
+				common.Point{680, 720},
+			}
+
+			p0_ := track[0].Center()
+			p1_ := track[len(track)-1].Center()
+			p0 := common.Point{float64(p0_.X), float64(p0_.Y)}
+			p1 := common.Point{float64(p1_.X), float64(p1_.Y)}
+			segment := -1
+
+			if leftPoly.Contains(p0) && rightPoly.Contains(p1) {
+				segment = 0
+			} else if leftPoly.Contains(p0) && topPoly.Contains(p1) {
+				segment = 1
+			} else if leftPoly.Contains(p0) && bottomPoly.Contains(p1) {
+				segment = 2
+			} else if rightPoly.Contains(p0) && leftPoly.Contains(p1) {
+				segment = 3
+			} else if rightPoly.Contains(p0) && topPoly.Contains(p1) {
+				segment = 4
+			} else if rightPoly.Contains(p0) && bottomPoly.Contains(p1) {
+				segment = 5
+			} else if topPoly.Contains(p0) && bottomPoly.Contains(p1) {
+				segment = 6
+			} else if topPoly.Contains(p0) && leftPoly.Contains(p1) {
+				segment = 7
+			} else if topPoly.Contains(p0) && rightPoly.Contains(p1) {
+				segment = 8
+			} else if bottomPoly.Contains(p0) && topPoly.Contains(p1) {
+				segment = 9
+			} else if bottomPoly.Contains(p0) && leftPoly.Contains(p1) {
+				segment = 10
+			} else if bottomPoly.Contains(p0) && rightPoly.Contains(p1) {
+				segment = 11
+			}
+
+			if segment >= 0 {
+				goodTracks[segment] = append(goodTracks[segment], track)
+			}
+
+		} else if label == "jnc6" {
+			leftPoly := common.Polygon{
+				common.Point{250, 490},
+				common.Point{250, 100},
+				common.Point{0, 100},
+				common.Point{0, 475},
+			}
+			topPoly := common.Polygon{
+				common.Point{750, 0},
+				common.Point{420, 0},
+				common.Point{420, 75},
+				common.Point{750, 75},
+			}
+			rightPoly := common.Polygon{
+				common.Point{1080, 100},
+				common.Point{815, 100},
+				common.Point{815, 540},
+				common.Point{1080, 545},
+			}
+			bottomPoly := common.Polygon{
+				common.Point{750, 600},
+				common.Point{300, 600},
+				common.Point{340, 720},
+				common.Point{680, 720},
+			}
+
+			p0_ := track[0].Center()
+			p1_ := track[len(track)-1].Center()
+			p0 := common.Point{float64(p0_.X), float64(p0_.Y)}
+			p1 := common.Point{float64(p1_.X), float64(p1_.Y)}
+			segment := -1
+
+			if leftPoly.Contains(p0) && rightPoly.Contains(p1) {
+				segment = 0
+			} else if leftPoly.Contains(p0) && topPoly.Contains(p1) {
+				segment = 1
+			} else if leftPoly.Contains(p0) && bottomPoly.Contains(p1) {
+				segment = 2
+			} else if rightPoly.Contains(p0) && leftPoly.Contains(p1) {
+				segment = 3
+			} else if rightPoly.Contains(p0) && topPoly.Contains(p1) {
+				segment = 4
+			} else if rightPoly.Contains(p0) && bottomPoly.Contains(p1) {
+				segment = 5
+			} else if topPoly.Contains(p0) && bottomPoly.Contains(p1) {
+				segment = 6
+			} else if topPoly.Contains(p0) && leftPoly.Contains(p1) {
+				segment = 7
+			} else if topPoly.Contains(p0) && rightPoly.Contains(p1) {
+				segment = 8
+			} else if bottomPoly.Contains(p0) && topPoly.Contains(p1) {
+				segment = 9
+			} else if bottomPoly.Contains(p0) && leftPoly.Contains(p1) {
+				segment = 10
+			} else if bottomPoly.Contains(p0) && rightPoly.Contains(p1) {
+				segment = 11
+			}
+
+			if segment >= 0 {
+				goodTracks[segment] = append(goodTracks[segment], track)
+			}
+
+		} else if label == "jnc7" {
+			leftPoly := common.Polygon{
+				common.Point{320, 430},
+				common.Point{320, 230},
+				common.Point{0, 260},
+				common.Point{0, 400},
+			}
+			topPoly := common.Polygon{
+				common.Point{810, 0},
+				common.Point{360, 0},
+				common.Point{360, 150},
+				common.Point{810, 150},
+			}
+			rightPoly := common.Polygon{
+				common.Point{1080, 230},
+				common.Point{815, 230},
+				common.Point{815, 520},
+				common.Point{1080, 515},
+			}
+			bottomPoly := common.Polygon{
+				common.Point{800, 600},
+				common.Point{300, 600},
+				common.Point{340, 720},
+				common.Point{800, 720},
+			}
+
+			p0_ := track[0].Center()
+			p1_ := track[len(track)-1].Center()
+			p0 := common.Point{float64(p0_.X), float64(p0_.Y)}
+			p1 := common.Point{float64(p1_.X), float64(p1_.Y)}
+			segment := -1
+
+			if leftPoly.Contains(p0) && rightPoly.Contains(p1) {
+				segment = 0
+			} else if leftPoly.Contains(p0) && topPoly.Contains(p1) {
+				segment = 1
+			} else if leftPoly.Contains(p0) && bottomPoly.Contains(p1) {
+				segment = 2
+			} else if rightPoly.Contains(p0) && leftPoly.Contains(p1) {
+				segment = 3
+			} else if rightPoly.Contains(p0) && topPoly.Contains(p1) {
+				segment = 4
+			} else if rightPoly.Contains(p0) && bottomPoly.Contains(p1) {
+				segment = 5
+			} else if topPoly.Contains(p0) && bottomPoly.Contains(p1) {
+				segment = 6
+			} else if topPoly.Contains(p0) && leftPoly.Contains(p1) {
+				segment = 7
+			} else if topPoly.Contains(p0) && rightPoly.Contains(p1) {
+				segment = 8
+			} else if bottomPoly.Contains(p0) && topPoly.Contains(p1) {
+				segment = 9
+			} else if bottomPoly.Contains(p0) && leftPoly.Contains(p1) {
+				segment = 10
+			} else if bottomPoly.Contains(p0) && rightPoly.Contains(p1) {
+				segment = 11
+			}
+
+			if segment >= 0 {
+				goodTracks[segment] = append(goodTracks[segment], track)
+			}
+
 		} else {
-			if (label == "amsterdam" || label == "jackson") && (duration < 10 || distance < 50) {
+			if (label == "amsterdam" || label == "amsterdam-y5" || label == "amsterdam-y11" || label == "jackson") && (duration < 10 || distance < 50) {
 				continue
 			}
 			if label == "taipei" && duration < 30 {
@@ -256,7 +506,17 @@ func Eval(dataRoot string, cfg Config, validtest string, path string) (float64, 
 	var accs []float64
 	for id := range gtCounts {
 		var detections [][]Detection
-		ReadJsonFile(fmt.Sprintf("%s/%d.json", path, id), &detections)
+
+		// WE DONT CARE ABOUT OTIF ACC
+		filePath := fmt.Sprintf("%s/%d.json", path, id)
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			fmt.Println("Warning: file not found, setting accuracy to 0:", filePath)
+			accs = append(accs, 0)
+			continue
+		}
+
+		ReadJsonFile(filePath, &detections)
+		// fmt.Println(detections)
 		goodTracks := GetGoodTracks(cfg.Label, detections)
 		counts := make([]int, len(goodTracks))
 		for segment := range goodTracks {
@@ -266,19 +526,34 @@ func Eval(dataRoot string, cfg Config, validtest string, path string) (float64, 
 		fmt.Println(id, "gt", gtCounts[id])
 
 		var curAccs []float64
-		for segment := range gtCounts[id] {
-			count1 := counts[segment]
-			count2 := gtCounts[id][segment]
-			var acc float64
-			//acc = 100-math.Abs(float64(count1-count2))
-			if count1 == count2 {
-				acc = 1
-			} else if count1 == 0 || count2 == 0 {
-				acc = 0
-			} else {
-				acc = 1 - math.Abs(float64(count1) - float64(count2)) / float64(count2)
+
+		allZero := true
+		for _, c := range counts {
+			if c != 0 {
+				allZero = false
+				break
 			}
-			curAccs = append(curAccs, acc)
+		}
+
+		if allZero {
+			curAccs = append(curAccs, 0.0)
+		} else {
+			for segment := range gtCounts[id] {
+				count1 := counts[segment]
+				count2 := gtCounts[id][segment]
+				var acc float64
+				//acc = 100-math.Abs(float64(count1-count2))
+				if count1 == count2 {
+					acc = 1
+				} else if count1 == 0 || count2 == 0 {
+					acc = 0
+				} else {
+					// acc = 1 - math.Abs(float64(count1) - float64(count2)) / float64(count2)
+					acc = float64(min(count1, count2)) / float64(max(count1, count2))
+					// acc = 2 * float64(min(count1, count2)) / float64(count1 + count2)
+				}
+				curAccs = append(curAccs, acc)
+			}
 		}
 		accs = append(accs, FloatsMean(curAccs))
 	}

@@ -6,7 +6,8 @@ import os
 import math
 import random
 import sys
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 #tf.disable_eager_execution()
 import time
 
@@ -23,11 +24,13 @@ with open(os.path.join(root_path, 'cfg.json'), 'r') as f:
 	fps = cfg['FPS']
 
 videos = []
-for fname in os.listdir(os.path.join(root_path, 'tracker/video/')):
+# for fname in os.listdir(os.path.join(root_path, 'tracker/video/')):
+for fname in os.listdir(os.path.join(root_path, 'train/video/')):
 	if not fname.endswith('.mp4'):
 		continue
 	id = int(fname.split('.mp4')[0])
-	with open(os.path.join(root_path, 'tracker/tracks', '{}.json'.format(id)), 'r') as f:
+	# with open(os.path.join(root_path, 'tracker/tracks', '{}.json'.format(id)), 'r') as f:
+	with open(os.path.join(root_path, 'train/tracks', '{}.json'.format(id)), 'r') as f:
 		detections = json.load(f)
 	# get first frame and idx and last frame of all unique tracks
 	tracks = {}
@@ -147,7 +150,7 @@ def sample(videos):
 		return inputs, boxes, mask, targets
 
 random.shuffle(videos)
-num_val = len(videos)//10
+num_val = max(1, len(videos)//10)
 val_videos = videos[0:num_val]
 train_videos = videos[num_val:]
 
@@ -167,6 +170,7 @@ os.makedirs(best_path, exist_ok=True)
 
 print('begin training')
 best_loss = None
+bad_loss_streak = 0
 
 for epoch in range(9999):
 	start_time = time.time()
@@ -200,9 +204,15 @@ for epoch in range(9999):
 	val_loss = numpy.mean(val_losses)
 	val_time = time.time()
 
+
 	print('iteration {}: train_time={}, val_time={}, train_loss={}, val_loss={}/{}'.format(epoch, int(train_time - start_time), int(val_time - train_time), train_loss, val_loss, best_loss))
 
 	m.saver.save(session, latest_path)
 	if best_loss is None or val_loss < best_loss:
 		best_loss = val_loss
 		m.saver.save(session, best_path)
+		bad_loss_streak = 0
+	else:
+		bad_loss_streak += 1
+		if bad_loss_streak > 25:
+			break

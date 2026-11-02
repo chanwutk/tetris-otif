@@ -13,10 +13,12 @@ def track_one(args):
 
 def track(label, in_path, out_path):
 	fnames = os.listdir(in_path)
-	if label in ['amsterdam', 'jackson', 'shibuya', 'caldot1', 'caldot2', 'warsaw', 'uav']:
-		cls = 'car'
-	elif label == 'taipei':
+	# if label in ['amsterdam', 'jackson', 'shibuya', 'caldot1', 'caldot2', 'warsaw', 'uav']:
+	# 	cls = 'car'
+	if label == 'taipei':
 		cls = 'bus'
+	else:
+		cls = 'car'
 	args = [(os.path.join(in_path, fname), os.path.join(out_path, fname), cls, 0) for fname in fnames if fname.endswith('.json')]
 	p = multiprocessing.Pool(16)
 	p.map(track_one, args)

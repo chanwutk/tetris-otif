@@ -1,18 +1,10 @@
+name: otif
 channels:
   - conda-forge
-  - pytorch
-  - nvidia
   - defaults
 dependencies:
-  - python=3.13
-
-  # darknet make dependency
-  - nvidia/label/cuda-12.1.1::cuda-nvcc
-
+  - python=3.7
   - pip
-  - pip:  # Need to install torch and torchvision separately because of index url
-    - --index-url https://download.pytorch.org/whl/cu124
-    - torch
-    - torchvision
-    - scikit-image
-    - 'tensorflow<2.0'
+  - pip:
+      - scikit-image
+      - 'tensorflow<2.0'

@@ -6,7 +6,7 @@ gdown>=5.2.0,<6.0.0
 # our dependencies
 opencv-python
 tqdm
-numpy>=2.3.2,<3.0.0
+numpy
 pandas
 Cython
 ultralytics
@@ -18,3 +18,4 @@ git+https://github.com/facebookresearch/detectron2.git
 
 vl-convert-python
 altair
+scikit-image

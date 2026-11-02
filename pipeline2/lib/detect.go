@@ -130,9 +130,155 @@ func NewYolov3(dataRoot string, batchSize int, dims [2]int, paramDims [2]int, or
 		"python", "yolov3.py",
 		dataRoot,
 		strconv.Itoa(batchSize),
-		strconv.Itoa(dims[0]), strconv.Itoa(dims[1]), strconv.Itoa(paramDims[0]), strconv.Itoa(paramDims[1]),
-		"0.25", strings.Join(classList, ","), label,
+		strconv.Itoa(dims[0]), 
+		strconv.Itoa(dims[1]), 
+		strconv.Itoa(paramDims[0]), 
+		strconv.Itoa(paramDims[1]),
+		"0.25", 
+		strings.Join(classList, ","), 
+		label,
 	)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		panic(err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+	if true {
+		cmd.Stderr = os.Stderr
+	}
+	if err := cmd.Start(); err != nil {
+		panic(err)
+	}
+	rd := bufio.NewReader(stdout)
+	return &Yolov3{
+		cmd: cmd,
+		stdin: stdin,
+		rd: rd,
+		batchSize: batchSize,
+		dims: dims,
+		origDims: origDims,
+		zeroImage: make([]byte, dims[0]*dims[1]*3),
+	}
+}
+
+// paramDims indicate the uncropped image dimensions (which determines the model parameters that we load)
+func NewYolov5(dataRoot string, batchSize int, dims [2]int, paramDims [2]int, origDims [2]int, threshold float64, classes map[string]bool, label string) *Yolov3 {
+	var classList []string
+	for cls := range classes {
+		classList = append(classList, cls)
+	}
+	cmd := exec.Command(
+		"/usr/local/envs/retinanet/bin/python", "yolov5.py",
+		dataRoot,
+		strconv.Itoa(batchSize),
+		strconv.Itoa(dims[0]), 
+		strconv.Itoa(dims[1]), 
+		strconv.Itoa(paramDims[0]), 
+		strconv.Itoa(paramDims[1]),
+		"0.25", 
+		strings.Join(classList, ","), 
+		label,
+		dataRoot + "/yolov5/" + label + "/best.pt",
+	)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		panic(err)
+	}
+	
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+	if true {
+		cmd.Stderr = os.Stderr
+	}
+	if err := cmd.Start(); err != nil {
+		panic(err)
+	}
+	rd := bufio.NewReader(stdout)
+	return &Yolov3{
+		cmd: cmd,
+		stdin: stdin,
+		rd: rd,
+		batchSize: batchSize,
+		dims: dims,
+		origDims: origDims,
+		zeroImage: make([]byte, dims[0]*dims[1]*3),
+	}
+}
+
+// paramDims indicate the uncropped image dimensions (which determines the model parameters that we load)
+func NewYolov11(dataRoot string, batchSize int, dims [2]int, paramDims [2]int, origDims [2]int, threshold float64, classes map[string]bool, label string) *Yolov3 {
+	var classList []string
+	for cls := range classes {
+		classList = append(classList, cls)
+	}
+	cmd := exec.Command(
+		"/usr/local/envs/retinanet/bin/python", "yolov5.py",
+		dataRoot,
+		strconv.Itoa(batchSize),
+		strconv.Itoa(dims[0]), 
+		strconv.Itoa(dims[1]), 
+		strconv.Itoa(paramDims[0]), 
+		strconv.Itoa(paramDims[1]),
+		"0.25", 
+		strings.Join(classList, ","), 
+		label,
+		dataRoot + "/yolov11/" + label + "/best.pt",
+	)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		panic(err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+	if true {
+		cmd.Stderr = os.Stderr
+	}
+	if err := cmd.Start(); err != nil {
+		panic(err)
+	}
+	rd := bufio.NewReader(stdout)
+	return &Yolov3{
+		cmd: cmd,
+		stdin: stdin,
+		rd: rd,
+		batchSize: batchSize,
+		dims: dims,
+		origDims: origDims,
+		zeroImage: make([]byte, dims[0]*dims[1]*3),
+	}
+}
+
+func NewRetinanet(dataRoot string, batchSize int, dims [2]int, paramDims [2]int, origDims [2]int, threshold float64, classes map[string]bool, label string) *Yolov3 {
+	var classList []string
+	for cls := range classes {
+		classList = append(classList, cls)
+	}
+	classesArg := strings.Join(classList, ",")
+	if classesArg == "" {
+		classesArg = "car"
+	}
+
+	cmd := exec.Command(
+		"/usr/local/envs/retinanet/bin/python", "retinanet.py",
+		dataRoot,
+		strconv.Itoa(batchSize),
+		strconv.Itoa(dims[0]),
+		strconv.Itoa(dims[1]),
+		strconv.Itoa(paramDims[0]),
+		strconv.Itoa(paramDims[1]),
+		"0.5",
+		classesArg,
+		label,
+	)
+
+
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		panic(err)

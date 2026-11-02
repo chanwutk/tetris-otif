@@ -6,9 +6,9 @@ services:
     environment:
       - TERM=xterm-256color
     volumes:
-      - .:/otif
+      - /work/alenachao/otif:/otif
       # Change /data/chawutk/otif-dataset to your local path
-      - /data/chanwutk/data/otif-dataset:/path/to/otif-dataset
+      - /work/alenachao/data/otif-dataset:/path/to/otif-dataset
     deploy:
       resources:
         reservations:

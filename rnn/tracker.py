@@ -6,7 +6,8 @@ import numpy
 import skimage.transform
 import struct
 import sys
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 #tf.disable_eager_execution()
 
 # run tracker on CPU
@@ -93,6 +94,7 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 m.saver.restore(session, model_path)
+
 if reid_enabled:
 	m.reid_saver.restore(session, reid_path)
 

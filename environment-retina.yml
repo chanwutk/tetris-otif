@@ -1,0 +1,14 @@
+name: retinanet
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - python=3.13
+  - pip
+  - pip:
+      - --index-url https://download.pytorch.org/whl/cu124
+      - torch
+      - torchvision
+      - ultralytics

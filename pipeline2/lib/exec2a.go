@@ -63,13 +63,15 @@ func GetExecOptions(mode string, istest bool) ExecOptions {
 	return opts
 }
 
-/*var segTime time.Duration
+var segTime time.Duration
 var detectTime time.Duration
 var decodeTime time.Duration
 var trackTime time.Duration
-var timeMu sync.Mutex*/
+var timeMu sync.Mutex
 
-func Exec2(dataRoot string, cfg Config, trainval string, outPath string, detectorCfg DetectorConfig, segmentationCfg SegmentationConfig, trackerCfg TrackerConfig, opts ExecOptions) (int, float64, float64) {
+// var decodeTime time.Duration
+// var timeMu sync.Mutex
+func Exec2(dataRoot string, cfg Config, trainval string, outPath string, detectorCfg DetectorConfig, segmentationCfg SegmentationConfig, trackerCfg TrackerConfig, opts ExecOptions, videoPath string) (int, float64, float64, int, int, int, int) {
 	fmt.Printf("exec config (%v, %v, %v) to %v\n", detectorCfg, segmentationCfg, trackerCfg, outPath)
 
 	os.MkdirAll(outPath, 0755)
@@ -80,7 +82,8 @@ func Exec2(dataRoot string, cfg Config, trainval string, outPath string, detecto
 		fmt.Printf("load clusters for refinement...\n")
 		var trainSet [][]TrackDetection
 
-		trainDir := filepath.Join(dataRoot, "dataset", cfg.Label, "tracker/tracks/")
+		// trainDir := filepath.Join(dataRoot, "dataset", cfg.Label, "tracker/tracks/")
+		trainDir := filepath.Join(dataRoot, "dataset", cfg.Label, "train/tracks/")
 		files, err := ioutil.ReadDir(trainDir)
 		if err != nil {
 			panic(err)
@@ -89,12 +92,15 @@ func Exec2(dataRoot string, cfg Config, trainval string, outPath string, detecto
 			if !strings.HasSuffix(fi.Name(), ".json") {
 				continue
 			}
-			bytes, err := ioutil.ReadFile(filepath.Join(trainDir, fi.Name()))
+			filePath := filepath.Join(trainDir, fi.Name())
+
+			bytes, err := ioutil.ReadFile(filePath)
 			if err != nil {
 				panic(err)
 			}
 			var detections [][]Detection
 			if err := json.Unmarshal(bytes, &detections); err != nil {
+				fmt.Printf("Failed to unmarshal file: %s\n", filePath)
 				panic(err)
 			}
 			detections = FilterDetectionsByClass(detections, cfg.Classes)
@@ -110,7 +116,10 @@ func Exec2(dataRoot string, cfg Config, trainval string, outPath string, detecto
 	any64 := false // reset t0 when the first thread gets to frame 64 or higher
 	var durationSamples []int
 
-	videoPath := filepath.Join(dataRoot, "dataset", cfg.Label, trainval, "video/")
+	if videoPath == "" {
+		videoPath = filepath.Join(dataRoot, "dataset", cfg.Label, trainval, "video/")
+	}
+	
 	fnames, err := ioutil.ReadDir(videoPath)
 	if err != nil {
 		panic(err)
@@ -232,11 +241,27 @@ func Exec2(dataRoot string, cfg Config, trainval string, outPath string, detecto
 			images = append(images, job.Image)
 		}
 
-		//t0 := time.Now()
+		t0 := time.Now()
 		windows := seg.GetWindows(images)
-		/*timeMu.Lock()
+		// fmt.Printf("Segmentation: got %d jobs, produced windows per image: ", len(images))
+		// for i, w := range windows {
+		// 	fmt.Printf("[%d:%d] ", i, len(w))
+		// }
+		// fmt.Println()
+		timeMu.Lock()
 		segTime += time.Now().Sub(t0)
-		timeMu.Unlock()*/
+		timeMu.Unlock()
+		// windowDir := filepath.Join(dataRoot, "dataset", cfg.Label, "windows_report.txt")
+		// f, err := os.OpenFile(windowDir, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// defer f.Close()
+
+		// for i, w := range windows {
+		// 	fmt.Fprintf(f, "[%d:%d] ", i, len(w))
+		// }
+
 
 		mu.Lock()
 		for i, job := range jobs {
@@ -262,7 +287,10 @@ func Exec2(dataRoot string, cfg Config, trainval string, outPath string, detecto
 		seg.Close()
 	})
 
+	
+
 	for szIdx, sz := range detectorCfg.Sizes {
+	// for _, sz := range detectorCfg.Sizes {
 		batchSize := 4
 		count := 1
 		if szIdx == 0 {
@@ -270,25 +298,78 @@ func Exec2(dataRoot string, cfg Config, trainval string, outPath string, detecto
 		}
 
 		for i := 0; i < count; i++ {
+			fmt.Printf("size: %v\n", sz)
+			var yolo *Yolov3
+			var debug_message string
+
 			// here, we set origDims=sz because we will handle re-scaling ourselves
 			// since anyway we e.g. need to run 128x128 detector on a crop of the image
-			yolo := NewYolov3(dataRoot, batchSize, sz, detectorCfg.Dims, sz, detectorCfg.Threshold, cfg.Classes, cfg.Label)
+			if strings.HasPrefix(cfg.Label, "caldot") {
+
+				if sz[0] >= 704 || sz[1] >= 480 {
+
+					if strings.HasSuffix(cfg.Label, "y5") {
+						debug_message = "using yolov5..."
+						yolo = NewYolov5(dataRoot, batchSize, sz, detectorCfg.Dims, sz, detectorCfg.Threshold, cfg.Classes, cfg.Label)
+					} else if strings.HasSuffix(cfg.Label, "y11") {
+						debug_message = "using yolov11..."
+						yolo = NewYolov11(dataRoot, batchSize, sz, detectorCfg.Dims, sz, detectorCfg.Threshold, cfg.Classes, cfg.Label)
+					} else {
+						debug_message = "y5 and y11 not included, using yolov3..."
+						yolo = NewYolov3(dataRoot, batchSize, sz, detectorCfg.Dims, sz, detectorCfg.Threshold, cfg.Classes, cfg.Label)
+					}
+					
+				} else {
+					debug_message = "y5 and y11 not included, using yolov3..."
+					yolo = NewYolov3(dataRoot, batchSize, sz, detectorCfg.Dims, sz, detectorCfg.Threshold, cfg.Classes, cfg.Label)
+				}
+
+			} else if strings.HasPrefix(cfg.Label, "amsterdam") {
+
+				// if sz[0] >= 704 || sz[1] >= 480 {
+
+				if strings.HasSuffix(cfg.Label, "y5") {
+					debug_message = "using yolov5..."
+					yolo = NewYolov5(dataRoot, batchSize, sz, detectorCfg.Dims, sz, detectorCfg.Threshold, cfg.Classes, cfg.Label)
+				} else if strings.HasSuffix(cfg.Label, "y11") {
+					debug_message = "using yolov11..."
+					yolo = NewYolov11(dataRoot, batchSize, sz, detectorCfg.Dims, sz, detectorCfg.Threshold, cfg.Classes, cfg.Label)
+				} else {
+					debug_message = "y5 and y11 not included, using yolov3..."
+					yolo = NewYolov3(dataRoot, batchSize, sz, detectorCfg.Dims, sz, detectorCfg.Threshold, cfg.Classes, cfg.Label)
+				}
+					
+				// } else {
+				// 	debug_message = "y5 and y11 not included, using yolov3..."
+				// 	yolo = NewYolov3(dataRoot, batchSize, sz, detectorCfg.Dims, sz, detectorCfg.Threshold, cfg.Classes, cfg.Label)
+				// }	
+
+			} else if strings.HasPrefix(cfg.Label, "jnc") {
+				debug_message = "using retinanet..."
+				yolo = NewRetinanet(dataRoot, batchSize, sz, detectorCfg.Dims, sz, detectorCfg.Threshold, cfg.Classes, cfg.Label)
+
+			} else {
+				debug_message = "not caldot or jnc, using yolov3..."
+				yolo = NewYolov3(dataRoot, batchSize, sz, detectorCfg.Dims, sz, detectorCfg.Threshold, cfg.Classes, cfg.Label)
+			}
+
+			
 			modelLoop(sz, batchSize, func(jobs []PendingJob) {
 				var indices []string
 				for _, job := range jobs {
 					indices = append(indices, fmt.Sprintf("%d/%d", job.ID, job.FrameIdx))
 				}
-				//fmt.Println(sz, "applying detector on jobs", indices)
+				fmt.Println(debug_message)
 				var images []Image
 				for _, job := range jobs {
 					images = append(images, job.Image)
 				}
 
-				//t0 := time.Now()
+				t0 := time.Now()
 				outputs := yolo.Detect(images)
-				/*timeMu.Lock()
+				timeMu.Lock()
 				detectTime += time.Now().Sub(t0)
-				timeMu.Unlock()*/
+				timeMu.Unlock()
 
 				mu.Lock()
 				for i, job := range jobs {
@@ -405,6 +486,7 @@ func Exec2(dataRoot string, cfg Config, trainval string, outPath string, detecto
 				tracks := GetTracks(detections)
 				tracks = Postprocess(clusters, tracks)
 				detections = DetectionsFromTracks(tracks)
+				// fmt.Printf("Video %d: %d tracks after cluster refinement\n", id, len(tracks))
 			}
 			if cfg.Label == "amsterdam" || cfg.Label == "jackson" {
 				goodTracks := GetGoodTracks("amsterdam", detections)[0]
@@ -442,7 +524,8 @@ func Exec2(dataRoot string, cfg Config, trainval string, outPath string, detecto
 	for _, duration := range durationSamples {
 		durationSum += duration
 	}
-	return durationSum/len(durationSamples)/len(videoFnames), acc, stderr
+	// durationSum -= int(decodeTime / time.Millisecond)
+	return durationSum/len(durationSamples)/len(videoFnames), acc, stderr, int(segTime/time.Millisecond), int(detectTime/time.Millisecond), int(trackTime/time.Millisecond), int(decodeTime/time.Millisecond)
 }
 
 type BufferedFfmpegReader struct {
@@ -607,26 +690,31 @@ func execTrackerLoop2(id int, tracker *Tracker, videoFname string, detectorDims 
 				continue
 			}
 			curFrame := lastFrame + skips[i]
-			//t0 := time.Now()
+			// TIME VIDEO DECODING
+			t0 := time.Now()
 			im, done := bfr.GetFrame(curFrame/minSkip)
-			/*timeMu.Lock()
+			timeMu.Lock()
 			decodeTime += time.Now().Sub(t0)
-			timeMu.Unlock()*/
+			timeMu.Unlock()
 			if done {
 				continue
 			}
 
 			dlist := getDetections(curFrame, im)
-			//t0 = time.Now()
+			t0 = time.Now()
 			tracked, conf := tracker.Infer(id, curFrame, im, dlist)
-			/*timeMu.Lock()
+			timeMu.Lock()
 			trackTime += time.Now().Sub(t0)
-			timeMu.Unlock()*/
+			timeMu.Unlock()
+			// fmt.Printf("Video %d, curFrame %d: tracker returned %d tracks, conf=%f\n", id, curFrame, len(tracked), conf)
+
 			if i != 0 && conf < profile.Thresholds[i] {
+				// fmt.Printf("Video %d, curFrame %d: skipping due to low conf %f < %f\n", id, curFrame, conf, profile.Thresholds[i])
 				continue
 			}
 			// update our state
 			setDetections(curFrame, tracked)
+			// fmt.Printf("Video %d, curFrame %d: storing %d tracks\n", id, curFrame, len(tracked))
 			lastFrame = curFrame
 			bfr.Discard(lastFrame/minSkip)
 			updated = true

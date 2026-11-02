@@ -86,7 +86,7 @@ func main() {
 			if tryConfigs == nil {
 				continue
 			}
-			t, acc, _ := lib.Exec2(dataRoot, cfg, "valid", "/tmp/y1/", tryConfigs.Detector, tryConfigs.Segmentation, tryConfigs.Tracker, opts)
+			t, acc, _, _, _, _, _ := lib.Exec2(dataRoot, cfg, "valid", "/tmp/y1/", tryConfigs.Detector, tryConfigs.Segmentation, tryConfigs.Tracker, opts ,"")
 			time.Sleep(5*time.Second)
 			fmt.Printf("[%v]: time=%d accuracy=%v\n", *tryConfigs, t, acc)
 			if acc > bestAcc {

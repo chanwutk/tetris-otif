@@ -29,7 +29,9 @@ else:
 detector_label = label
 if detector_label.startswith('caldot'):
 	detector_label = 'caldot'
-if detector_label in ['amsterdam', 'jackson']:
+if detector_label.startswith('jnc'):
+	detector_label = 'jnc'
+if detector_label in ['amsterdam', 'amsterdam-y5', 'amsterdam-y11', 'jackson']:
 	detector_label = 'generic'
 
 config_path = os.path.join(data_root, 'yolov3', detector_label, 'yolov3-{}x{}-test.cfg'.format(param_width, param_height))
@@ -39,7 +41,7 @@ names_path = os.path.join(data_root, 'yolov3', detector_label, 'obj.names')
 if detector_label == 'generic':
 	weight_path = os.path.join(data_root, 'yolov3', detector_label, 'yolov3.best')
 else:
-	weight_path = os.path.join(data_root, 'yolov3', label, 'yolov3-{}x{}.best'.format(param_width, param_height))
+	weight_path = os.path.join(data_root, 'yolov3', detector_label, 'yolov3-{}x{}.best'.format(param_width, param_height))
 
 # ensure width/height in config file
 with open(config_path, 'r') as f:
